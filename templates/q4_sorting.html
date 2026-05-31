@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Q4: Sorting & Searching{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card shadow">
+            <div class="card-header bg-warning text-dark">
+                <h4 class="mb-0"><i class="bi bi-sort-numeric-down"></i> Sorting & Searching Student IDs</h4>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="mb-3">
+                        <label for="student_ids" class="form-label">Student IDs (comma-separated)</label>
+                        <input type="text" class="form-control" id="student_ids" name="student_ids" 
+                               placeholder="e.g., 101, 205, 150, 302" required>
+                        <div class="form-text">Enter numbers separated by commas</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="search_id" class="form-label">ID to Search</label>
+                        <input type="number" class="form-control" id="search_id" name="search_id" required>
+                    </div>
+                    <button type="submit" class="btn btn-warning w-100">
+                        <i class="bi bi-search"></i> Sort & Search
+                    </button>
+                </form>
+            </div>
+        </div>
+        
+        {% if result %}
+        <div class="card mt-4 shadow">
+            <div class="card-body">
+                <h5>Results</h5>
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Original:</strong> {{ result.original | join(', ') }}</p>
+                        <p><strong>Sorted (Bubble):</strong> {{ result.sorted | join(', ') }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Search ID:</strong> {{ result.search_id }}</p>
+                        <p><strong>Linear Search:</strong> 
+                            {% if result.linear_position %}Found at position {{ result.linear_position }}{% else %}Not found{% endif %}
+                        </p>
+                        <p><strong>Binary Search:</strong> 
+                            {% if result.binary_position %}Found at position {{ result.binary_position }}{% else %}Not found{% endif %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

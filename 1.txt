@@ -1,0 +1,1297 @@
+## 📁 Project Structure
+
+```
+smart-campus-system/
+├── app.py
+├── requirements.txt
+├── runtime.txt
+├── Procfile
+├── README.md
+├── static/
+│   ├── css/
+│   │   └── style.css
+│   ├── js/
+│   │   └── scripts.js
+│   └── images/
+├── templates/
+│   ├── base.html
+│   ├── index.html
+│   ├── q1_registration.html
+│   ├── q2_enrollment.html
+│   ├── q3_records.html
+│   ├── q4_sorting.html
+│   ├── q5_fees.html
+│   ├── q6_filehandling.html
+│   ├── q7_directory.html
+│   └── q8_analysis.html
+└── data/
+    ├── students.txt
+    └── student_marks.csv
+```
+
+---
+
+### `app.py`
+```python
+from flask import Flask, render_template, request, jsonify, flash, redirect, url_for
+import os
+import json
+import numpy as np
+import pandas as pd
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+import base64
+from io import BytesIO
+
+app = Flask(__name__)
+app.secret_key = 'smart_campus_secret_2026'
+
+# In-memory storage (use database in production)
+students_db = []
+courses_db = {}
+student_records = [
+    {"name": "Alice", "age": 20, "grades": [85, 90, 88]},
+    {"name": "Bob", "age": 21, "grades": [78, 82, 80]},
+    {"name": "Charlie", "age": 19, "grades": [92, 95, 91]}
+]
+
+# ============ Q1: Student Registration & Grade Evaluation ============
+def get_grade(score):
+    if score > 90:
+        return {"grade": "A", "remark": "Excellent"}
+    elif score >= 80:
+        return {"grade": "B", "remark": "Very Good"}
+    elif score >= 70:
+        return {"grade": "C", "remark": "Good"}
+    elif score >= 60:
+        return {"grade": "D", "remark": "Average"}
+    else:
+        return {"grade": "E", "remark": "FAIL!"}
+
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+@app.route('/q1', methods=['GET', 'POST'])
+def q1_registration():
+    result = None
+    if request.method == 'POST':
+        name = request.form.get('name')
+        try:
+            score = int(request.form.get('score'))
+            if 0 <= score <= 100:
+                result = {"name": name, "score": score, **get_grade(score)}
+                students_db.append({"name": name, "score": score, **get_grade(score)})
+            else:
+                flash("Error: Score must be between 0 and 100", "danger")
+        except ValueError:
+            flash("Invalid input. Score must be a number.", "danger")
+    return render_template('q1_registration.html', result=result)
+
+# ============ Q2: Course Enrollment Management ============
+@app.route('/q2', methods=['GET', 'POST'])
+def q2_enrollment():
+    if request.method == 'POST':
+        action = request.form.get('action')
+        if action == 'enroll':
+            course_name = request.form.get('course_name').strip()
+            try:
+                credit = int(request.form.get('credit'))
+                if course_name and credit > 0:
+                    courses_db[course_name] = credit
+                    flash(f"✓ Enrolled in {course_name} ({credit} credits)", "success")
+                else:
+                    flash("Invalid course name or credit value", "danger")
+            except ValueError:
+                flash("Credit must be a number", "danger")
+        elif action == 'clear':
+            courses_db.clear()
+            flash("All courses cleared", "info")
+    return render_template('q2_enrollment.html', courses=courses_db)
+
+# ============ Q3: Student Record Data Management ============
+@app.route('/q3')
+def q3_records():
+    event1 = {"Alice", "Bob", "David"}
+    event2 = {"Alice", "Bob", "Charlie"}
+    common = event1.intersection(event2)
+    return render_template('q3_records.html', 
+                         records=student_records,
+                         event1=event1, 
+                         event2=event2, 
+                         common=common)
+
+# ============ Q4: Sorting & Searching Student IDs ============
+@app.route('/q4', methods=['GET', 'POST'])
+def q4_sorting():
+    result = {}
+    if request.method == 'POST':
+        ids_input = request.form.get('student_ids')
+        search_id = request.form.get('search_id')
+        try:
+            student_ids = [int(x.strip()) for x in ids_input.split(',') if x.strip()]
+            original = student_ids.copy()
+            
+            # Bubble Sort
+            sorted_ids = student_ids.copy()
+            for i in range(len(sorted_ids)):
+                for j in range(0, len(sorted_ids) - i - 1):
+                    if sorted_ids[j] > sorted_ids[j + 1]:
+                        sorted_ids[j], sorted_ids[j + 1] = sorted_ids[j + 1], sorted_ids[j]
+            
+            # Linear Search
+            linear_pos = None
+            for i, sid in enumerate(sorted_ids):
+                if sid == int(search_id):
+                    linear_pos = i + 1
+                    break
+            
+            # Binary Search
+            binary_pos = None
+            low, high = 0, len(sorted_ids) - 1
+            while low <= high:
+                mid = (low + high) // 2
+                if sorted_ids[mid] == int(search_id):
+                    binary_pos = mid + 1
+                    break
+                elif sorted_ids[mid] < int(search_id):
+                    low = mid + 1
+                else:
+                    high = mid - 1
+            
+            result = {
+                'original': original,
+                'sorted': sorted_ids,
+                'search_id': int(search_id),
+                'linear_position': linear_pos,
+                'binary_position': binary_pos
+            }
+        except ValueError:
+            flash("Please enter valid numbers", "danger")
+    return render_template('q4_sorting.html', result=result)
+
+# ============ Q5: Student Fee Calculation ============
+@app.route('/q5', methods=['GET', 'POST'])
+def q5_fees():
+    total_fee = None
+    if request.method == 'POST':
+        try:
+            tuition = float(request.form.get('tuition') or 0)
+            hostel = float(request.form.get('hostel') or 0)
+            transport = float(request.form.get('transport') or 0)
+            total_fee = tuition + hostel + transport
+        except ValueError:
+            flash("Please enter valid fee amounts", "danger")
+    return render_template('q5_fees.html', total_fee=total_fee)
+
+# ============ Q6: File Handling for Academic Records ============
+DATA_FILE = 'data/students.txt'
+
+@app.route('/q6', methods=['GET', 'POST'])
+def q6_filehandling():
+    message = None
+    records = []
+    report = None
+    
+    if request.method == 'POST':
+        action = request.form.get('action')
+        
+        if action == 'write':
+            try:
+                n = int(request.form.get('count'))
+                with open(DATA_FILE, 'w') as f:
+                    for i in range(n):
+                        name = request.form.get(f'name_{i}')
+                        marks = request.form.get(f'marks_{i}')
+                        if name and marks:
+                            f.write(f"{name},{marks}\n")
+                message = "✓ Records saved successfully!"
+            except Exception as e:
+                message = f"Error: {str(e)}"
+                
+        elif action == 'read':
+            try:
+                with open(DATA_FILE, 'r') as f:
+                    for line in f:
+                        if ',' in line:
+                            name, marks = line.strip().split(',', 1)
+                            records.append({"name": name, "marks": marks})
+            except FileNotFoundError:
+                message = "File not found! Write records first."
+                
+        elif action == 'report':
+            try:
+                total, count, highest, topper = 0, 0, 0, ""
+                with open(DATA_FILE, 'r') as f:
+                    for line in f:
+                        if ',' in line:
+                            name, marks = line.strip().split(',', 1)
+                            marks = int(marks)
+                            total += marks
+                            count += 1
+                            if marks > highest:
+                                highest = marks
+                                topper = name
+                if count > 0:
+                    report = {
+                        'total_students': count,
+                        'average': round(total/count, 2),
+                        'topper': topper,
+                        'highest': highest
+                    }
+            except FileNotFoundError:
+                message = "File not found!"
+                
+    return render_template('q6_filehandling.html', 
+                         message=message, 
+                         records=records, 
+                         report=report)
+
+# ============ Q7: Directory Scanning with Exception Handling ============
+class EmptyDirectoryError(Exception):
+    pass
+
+@app.route('/q7', methods=['GET', 'POST'])
+def q7_directory():
+    structure = None
+    error = None
+    
+    if request.method == 'POST':
+        path = request.form.get('directory_path', '').strip()
+        try:
+            if not os.path.exists(path):
+                raise FileNotFoundError("Directory does not exist!")
+            if not os.path.isdir(path):
+                raise NotADirectoryError("Given path is not a directory!")
+            if len(os.listdir(path)) == 0:
+                raise EmptyDirectoryError("Directory is empty!")
+            
+            structure = []
+            for root, dirs, files in os.walk(path):
+                level = root.replace(path, '').count(os.sep)
+                indent = '  ' * 4 * level
+                structure.append({
+                    'name': os.path.basename(root) or root,
+                    'type': 'folder',
+                    'level': level,
+                    'indent': indent
+                })
+                for file in files:
+                    structure.append({
+                        'name': file,
+                        'type': 'file',
+                        'level': level + 1,
+                        'indent': '  ' * 4 * (level + 1)
+                    })
+        except (FileNotFoundError, NotADirectoryError, EmptyDirectoryError) as e:
+            error = str(e)
+        except Exception as e:
+            error = f"Unexpected Error: {str(e)}"
+            
+    return render_template('q7_directory.html', structure=structure, error=error)
+
+# ============ Q8: Performance Analysis with Charts ============
+@app.route('/q8')
+def q8_analysis():
+    data = {
+        'Student': ['Asha', 'Rahul', 'Kiran', 'Sneha', 'Arjun'],
+        'Maths': [85, 78, 92, 74, 88],
+        'Science': [90, 82, 89, 70, 95],
+        'English': [88, 76, 91, 72, 84]
+    }
+    df = pd.DataFrame(data)
+    df['Average'] = df[['Maths', 'Science', 'English']].mean(axis=1)
+    
+    def plot_to_base64(fig):
+        buf = BytesIO()
+        fig.savefig(buf, format='png', bbox_inches='tight')
+        buf.seek(0)
+        img_base64 = base64.b64encode(buf.read()).decode('utf-8')
+        plt.close(fig)
+        return img_base64
+    
+    subjects = ['Maths', 'Science', 'English']
+    averages = [df['Maths'].mean(), df['Science'].mean(), df['English'].mean()]
+    
+    # Bar Chart
+    fig1, ax1 = plt.subplots(figsize=(8, 5))
+    ax1.bar(subjects, averages, color=['#4e79a7', '#f28e2b', '#59a14f'])
+    ax1.set_title('Average Marks by Subject')
+    ax1.set_xlabel('Subjects')
+    ax1.set_ylabel('Average Marks')
+    bar_chart = plot_to_base64(fig1)
+    
+    # Line Graph
+    fig2, ax2 = plt.subplots(figsize=(8, 5))
+    ax2.plot(df['Student'], df['Average'], marker='o', color='#e15759', linewidth=2)
+    ax2.set_title('Student Average Performance')
+    ax2.set_xlabel('Students')
+    ax2.set_ylabel('Average Marks')
+    ax2.grid(True, alpha=0.3)
+    line_chart = plot_to_base64(fig2)
+    
+    # Pie Chart
+    fig3, ax3 = plt.subplots(figsize=(6, 6))
+    ax3.pie(averages, labels=subjects, autopct='%1.1f%%',
+            colors=['#4e79a7', '#f28e2b', '#59a14f'])
+    ax3.set_title('Subject-wise Average Contribution')
+    pie_chart = plot_to_base64(fig3)
+    
+    topper = df.loc[df['Average'].idxmax()]
+    
+    return render_template('q8_analysis.html',
+                         dataframe=df.to_html(classes='table table-striped', index=False),
+                         bar_chart=bar_chart,
+                         line_chart=line_chart,
+                         pie_chart=pie_chart,
+                         topper=topper,
+                         stats={
+                             'math_avg': round(df['Maths'].mean(), 2),
+                             'science_avg': round(df['Science'].mean(), 2),
+                             'english_avg': round(df['English'].mean(), 2)
+                         })
+
+@app.route('/api/students')
+def api_students():
+    return jsonify(students_db)
+
+if __name__ == '__main__':
+    os.makedirs('data', exist_ok=True)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(debug=True, host='0.0.0.0', port=port)
+```
+
+---
+
+### `requirements.txt`
+```txt
+Flask==2.3.3
+pandas==2.0.3
+numpy==1.24.3
+matplotlib==3.7.2
+gunicorn==21.2.0
+Werkzeug==2.3.7
+```
+
+---
+
+### `runtime.txt`
+```txt
+python-3.11.0
+```
+
+---
+
+### `Procfile`
+```txt
+web: gunicorn app:app --log-file -
+```
+
+---
+
+### `README.md`
+```markdown
+# 🎓 Smart Campus Information System
+
+A comprehensive Flask web application integrating **8 Python programming concepts** from the original CLI programs into a unified, responsive web platform.
+
+## ✨ Features
+
+| Module | Original Concept | Web Implementation |
+|--------|-----------------|-------------------|
+| Q1 | Student Registration & Grade Evaluation | Form input + conditional grading logic |
+| Q2 | Course Enrollment Management | Dictionary-based course tracking |
+| Q3 | Student Record Management | Lists, dicts, sets with set operations |
+| Q4 | Sorting & Searching | Bubble sort + Linear/Binary search |
+| Q5 | Fee Calculation | Functions with default parameters |
+| Q6 | File Handling | Read/write CSV-style records + reports |
+| Q7 | Directory Scanning | OS module + custom exception handling |
+| Q8 | Performance Analytics | NumPy/Pandas/Matplotlib charts |
+
+## 🚀 Quick Start
+
+### Local Development
+```bash
+# Clone/create project
+cd smart-campus-system
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Run the app
+python app.py
+
+# Open browser: http://localhost:5000
+```
+
+### Deploy to Render (Free Tier)
+1. Push code to GitHub
+2. Create new Web Service on [render.com](https://render.com)
+3. Connect your repo
+4. Set build command: `pip install -r requirements.txt`
+5. Set start command: `gunicorn app:app`
+6. Deploy! 🎉
+
+## 📁 Project Structure
+See tree diagram at top of this file.
+
+## 🔧 Production Notes
+- Use environment variables for `SECRET_KEY`
+- Add database (SQLite/PostgreSQL) for persistent storage
+- Enable HTTPS in production
+- Add authentication for sensitive modules
+
+## 🎨 Frontend
+- Bootstrap 5 for responsive design
+- Jinja2 templating for dynamic content
+- Matplotlib charts rendered as base64 PNGs
+
+## 📄 License
+MIT License - Free for educational use.
+```
+
+---
+
+### `static/css/style.css`
+```css
+/* Smart Campus - Custom Styles */
+:root {
+    --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+body {
+    background-color: #f8f9fa;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+.navbar {
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.hover-shadow {
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.hover-shadow:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+}
+
+.card {
+    border: none;
+    border-radius: 12px;
+    transition: all 0.3s ease;
+}
+
+.card:hover {
+    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+}
+
+.btn {
+    border-radius: 8px;
+    font-weight: 500;
+}
+
+.alert {
+    border-radius: 10px;
+    border: none;
+}
+
+.chart-container {
+    background: white;
+    border-radius: 8px;
+    padding: 15px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: transform 0.2s;
+}
+
+.chart-container:hover {
+    transform: scale(1.02);
+}
+
+.chart-img {
+    max-width: 100%;
+    height: auto;
+}
+
+.form-control:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 0.25rem rgba(102, 126, 234, 0.25);
+}
+
+.table th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+}
+
+@keyframes slideIn {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+.alert {
+    animation: slideIn 0.3s ease-out;
+}
+
+footer {
+    background: linear-gradient(to right, #f8f9fa, #e9ecef);
+}
+```
+
+---
+
+### `static/js/scripts.js`
+```javascript
+// Smart Campus - Frontend Scripts
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-dismiss alerts after 5 seconds
+    setTimeout(() => {
+        document.querySelectorAll('.alert').forEach(alert => {
+            const bsAlert = new bootstrap.Alert(alert);
+            bsAlert.close();
+        });
+    }, 5000);
+
+    // Q4: Real-time validation for student IDs input
+    const studentIdsInput = document.getElementById('student_ids');
+    if (studentIdsInput) {
+        studentIdsInput.addEventListener('input', function(e) {
+            e.target.value = e.target.value.replace(/[^0-9,\s]/g, '');
+        });
+    }
+
+    // Q7: Directory path hint on focus
+    const dirPathInput = document.getElementById('directory_path');
+    if (dirPathInput) {
+        dirPathInput.addEventListener('focus', function() {
+            this.placeholder = "Example: C:/Users/YourName/Documents or /home/user/projects";
+        });
+    }
+
+    // Smooth scroll for anchor links
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', function(e) {
+            e.preventDefault();
+            const target = document.querySelector(this.getAttribute('href'));
+            if (target) {
+                target.scrollIntoView({ behavior: 'smooth' });
+            }
+        });
+    });
+});
+```
+
+---
+
+### `templates/base.html`
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Smart Campus System{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary sticky-top">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('index') }}">
+                <i class="bi bi-mortarboard-fill"></i> Smart Campus
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item"><a class="nav-link" href="{{ url_for('index') }}"><i class="bi bi-house"></i> Home</a></li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-grid"></i> Modules
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{{ url_for('q1_registration') }}">Q1: Registration</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('q2_enrollment') }}">Q2: Enrollment</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('q3_records') }}">Q3: Records</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('q4_sorting') }}">Q4: Sorting/Search</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('q5_fees') }}">Q5: Fee Calculation</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('q6_filehandling') }}">Q6: File Handling</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('q7_directory') }}">Q7: Directory Scan</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('q8_analysis') }}">Q8: Analytics</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Flash Messages -->
+    <div class="container mt-3">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+
+    <!-- Main Content -->
+    <main class="container py-4">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-light text-center py-3 mt-5 border-top">
+        <p class="mb-0 text-muted">© 2026 Smart Campus | All 8 Programs Integrated</p>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/scripts.js') }}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
+```
+
+---
+
+### `templates/index.html`
+```html
+{% extends "base.html" %}
+{% block title %}Dashboard - Smart Campus{% endblock %}
+
+{% block content %}
+<div class="text-center mb-5">
+    <h1 class="display-4 fw-bold text-primary">
+        <i class="bi bi-mortarboard-fill"></i> Smart Campus Information System
+    </h1>
+    <p class="lead text-muted">Integrated Student Management Platform with 8 Core Modules</p>
+</div>
+
+<div class="row g-4">
+    <!-- Q1-Q8 Cards -->
+    {% set modules = [
+        ('q1_registration', 'Q1: Registration', 'person-plus', 'primary', 'Student registration with automated grade evaluation'),
+        ('q2_enrollment', 'Q2: Enrollment', 'book', 'success', 'Manage course enrollment with credit validation'),
+        ('q3_records', 'Q3: Records', 'database', 'info', 'Student data management using lists, dicts & sets'),
+        ('q4_sorting', 'Q4: Sort/Search', 'sort-numeric-down', 'warning', 'Bubble sort + Linear & Binary search'),
+        ('q5_fees', 'Q5: Fees', 'cash-stack', 'danger', 'Calculate total fees with optional add-ons'),
+        ('q6_filehandling', 'Q6: File I/O', 'file-earmark-text', 'secondary', 'Write/read student records & generate reports'),
+        ('q7_directory', 'Q7: Directory', 'folder2-open', 'dark', 'Scan directories with custom exception handling'),
+        ('q8_analysis', 'Q8: Analytics', 'graph-up', 'primary', 'Performance analysis with NumPy, Pandas & charts')
+    ] %}
+    
+    {% for route, title, icon, color, desc in modules %}
+    <div class="col-md-6 col-lg-3">
+        <div class="card h-100 border-{{ color }} hover-shadow">
+            <div class="card-body text-center">
+                <i class="bi bi-{{ icon }} fs-1 text-{{ color }} mb-3"></i>
+                <h5 class="card-title">{{ title }}</h5>
+                <p class="card-text small">{{ desc }}</p>
+                <a href="{{ url_for(route) }}" class="btn btn-outline-{{ color }} btn-sm">Open Module</a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="mt-5 p-4 bg-light rounded">
+    <h5><i class="bi bi-info-circle"></i> About This System</h5>
+    <p>This Smart Campus Information System integrates all 8 Python programming concepts into a unified web application. Built with Flask backend and Bootstrap frontend.</p>
+    <ul class="mb-0">
+        <li>Functions, conditionals & input validation</li>
+        <li>Data structures (lists, dictionaries, sets)</li>
+        <li>Sorting algorithms & search techniques</li>
+        <li>File handling & exception management</li>
+        <li>Data analysis with NumPy, Pandas & visualization</li>
+    </ul>
+</div>
+{% endblock %}
+```
+
+---
+
+### `templates/q1_registration.html`
+```html
+{% extends "base.html" %}
+{% block title %}Q1: Student Registration{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0"><i class="bi bi-person-plus"></i> Student Registration & Grade Evaluation</h4>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Student Name</label>
+                        <input type="text" class="form-control" id="name" name="name" required placeholder="Enter student name">
+                    </div>
+                    <div class="mb-3">
+                        <label for="score" class="form-label">Exam Score (0-100)</label>
+                        <input type="number" class="form-control" id="score" name="score" min="0" max="100" required placeholder="Enter score">
+                        <div class="form-text">Score must be between 0 and 100</div>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-check-circle"></i> Evaluate Grade
+                    </button>
+                </form>
+            </div>
+        </div>
+        
+        {% if result %}
+        <div class="card mt-4 shadow border-success">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">Evaluation Result</h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6">
+                        <h6 class="text-muted">Student</h6>
+                        <h4>{{ result.name }}</h4>
+                    </div>
+                    <div class="col-6">
+                        <h6 class="text-muted">Score</h6>
+                        <h4>{{ result.score }}/100</h4>
+                    </div>
+                </div>
+                <hr>
+                <div class="text-center">
+                    <span class="badge bg-primary fs-5 px-4 py-2">Grade: {{ result.grade }}</span>
+                    <p class="mt-3 mb-0 fw-bold">{{ result.remark }}</p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+```
+
+---
+
+### `templates/q2_enrollment.html`
+```html
+{% extends "base.html" %}
+{% block title %}Q2: Course Enrollment{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <div class="card shadow">
+            <div class="card-header bg-success text-white">
+                <h4 class="mb-0"><i class="bi bi-book"></i> Course Enrollment Management</h4>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="mb-3">
+                        <label for="course_name" class="form-label">Course Name</label>
+                        <input type="text" class="form-control" id="course_name" name="course_name" required placeholder="e.g., Python Programming">
+                    </div>
+                    <div class="mb-3">
+                        <label for="credit" class="form-label">Credit Value</label>
+                        <input type="number" class="form-control" id="credit" name="credit" min="1" required placeholder="e.g., 3">
+                    </div>
+                    <input type="hidden" name="action" value="enroll">
+                    <button type="submit" class="btn btn-success w-100">
+                        <i class="bi bi-plus-circle"></i> Enroll in Course
+                    </button>
+                </form>
+                
+                {% if courses %}
+                <hr>
+                <h6>Enrolled Courses:</h6>
+                <ul class="list-group">
+                    {% for course, credit in courses.items() %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        {{ course }}
+                        <span class="badge bg-primary rounded-pill">{{ credit }} credits</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% endif %}
+            </div>
+            <div class="card-footer">
+                <form method="POST" class="d-inline">
+                    <input type="hidden" name="action" value="clear">
+                    <button type="submit" class="btn btn-outline-danger btn-sm">Clear All Courses</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+```
+
+---
+
+### `templates/q3_records.html`
+```html
+{% extends "base.html" %}
+{% block title %}Q3: Student Records{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-6">
+        <div class="card shadow mb-4">
+            <div class="card-header bg-info text-white">
+                <h4 class="mb-0"><i class="bi bi-database"></i> Student Records</h4>
+            </div>
+            <div class="card-body">
+                {% for student in records %}
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <h5 class="card-title">{{ student.name }}</h5>
+                        <p class="card-text mb-1"><strong>Age:</strong> {{ student.age }}</p>
+                        <p class="card-text mb-1"><strong>Grades:</strong> {{ student.grades | join(', ') }}</p>
+                        <p class="card-text"><strong>Average:</strong> {{ (student.grades | sum) / (student.grades | length) | round(2) }}</p>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-6">
+        <div class="card shadow">
+            <div class="card-header bg-warning text-dark">
+                <h4 class="mb-0"><i class="bi bi-people"></i> Event Participation (Sets)</h4>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-6">
+                        <h6>Event 1</h6>
+                        <ul class="list-unstyled">
+                            {% for name in event1 %}<li>• {{ name }}</li>{% endfor %}
+                        </ul>
+                    </div>
+                    <div class="col-6">
+                        <h6>Event 2</h6>
+                        <ul class="list-unstyled">
+                            {% for name in event2 %}<li>• {{ name }}</li>{% endfor %}
+                        </ul>
+                    </div>
+                </div>
+                <hr>
+                <div class="alert alert-success">
+                    <strong>Common Participants:</strong>
+                    <ul class="mb-0">
+                        {% for name in common %}<li>{{ name }}</li>{% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+```
+
+---
+
+### `templates/q4_sorting.html`
+```html
+{% extends "base.html" %}
+{% block title %}Q4: Sorting & Searching{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card shadow">
+            <div class="card-header bg-warning text-dark">
+                <h4 class="mb-0"><i class="bi bi-sort-numeric-down"></i> Sorting & Searching Student IDs</h4>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="mb-3">
+                        <label for="student_ids" class="form-label">Student IDs (comma-separated)</label>
+                        <input type="text" class="form-control" id="student_ids" name="student_ids" 
+                               placeholder="e.g., 101, 205, 150, 302" required>
+                        <div class="form-text">Enter numbers separated by commas</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="search_id" class="form-label">ID to Search</label>
+                        <input type="number" class="form-control" id="search_id" name="search_id" required>
+                    </div>
+                    <button type="submit" class="btn btn-warning w-100">
+                        <i class="bi bi-search"></i> Sort & Search
+                    </button>
+                </form>
+            </div>
+        </div>
+        
+        {% if result %}
+        <div class="card mt-4 shadow">
+            <div class="card-body">
+                <h5>Results</h5>
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Original:</strong> {{ result.original | join(', ') }}</p>
+                        <p><strong>Sorted (Bubble):</strong> {{ result.sorted | join(', ') }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Search ID:</strong> {{ result.search_id }}</p>
+                        <p><strong>Linear Search:</strong> 
+                            {% if result.linear_position %}Found at position {{ result.linear_position }}{% else %}Not found{% endif %}
+                        </p>
+                        <p><strong>Binary Search:</strong> 
+                            {% if result.binary_position %}Found at position {{ result.binary_position }}{% else %}Not found{% endif %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+```
+
+---
+
+### `templates/q5_fees.html`
+```html
+{% extends "base.html" %}
+{% block title %}Q5: Fee Calculation{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <div class="card shadow">
+            <div class="card-header bg-danger text-white">
+                <h4 class="mb-0"><i class="bi bi-cash-stack"></i> Student Fee Calculation</h4>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="mb-3">
+                        <label for="tuition" class="form-label">Tuition Fee ($)</label>
+                        <input type="number" class="form-control" id="tuition" name="tuition" step="0.01" required placeholder="e.g., 5000.00">
+                    </div>
+                    <div class="mb-3">
+                        <label for="hostel" class="form-label">Hostel Fee ($)</label>
+                        <input type="number" class="form-control" id="hostel" name="hostel" step="0.01" value="0" placeholder="Enter 0 if not applicable">
+                    </div>
+                    <div class="mb-3">
+                        <label for="transport" class="form-label">Transport Fee ($)</label>
+                        <input type="number" class="form-control" id="transport" name="transport" step="0.01" value="0" placeholder="Enter 0 if not applicable">
+                    </div>
+                    <button type="submit" class="btn btn-danger w-100">
+                        <i class="bi bi-calculator"></i> Calculate Total Fee
+                    </button>
+                </form>
+            </div>
+        </div>
+        
+        {% if total_fee is not none %}
+        <div class="card mt-4 shadow border-danger">
+            <div class="card-body text-center">
+                <h5 class="text-muted">Total Payable Fee</h5>
+                <h1 class="display-4 fw-bold text-danger">${{ "%.2f"|format(total_fee) }}</h1>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+```
+
+---
+
+### `templates/q6_filehandling.html`
+```html
+{% extends "base.html" %}
+{% block title %}Q6: File Handling{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-6">
+        <div class="card shadow mb-4">
+            <div class="card-header bg-secondary text-white">
+                <h4 class="mb-0"><i class="bi bi-file-earmark-text"></i> Write Records</h4>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <input type="hidden" name="action" value="write">
+                    <div class="mb-3">
+                        <label class="form-label">Number of Students</label>
+                        <input type="number" class="form-control" name="count" min="1" max="10" required>
+                    </div>
+                    <div id="student-forms"></div>
+                    <button type="submit" class="btn btn-secondary">
+                        <i class="bi bi-save"></i> Save to File
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-6">
+        <div class="card shadow mb-4">
+            <div class="card-header bg-dark text-white">
+                <h4 class="mb-0"><i class="bi bi-folder2-open"></i> Read & Report</h4>
+            </div>
+            <div class="card-body">
+                <form method="POST" class="d-flex gap-2 mb-3">
+                    <input type="hidden" name="action" value="read">
+                    <button type="submit" class="btn btn-outline-dark flex-grow-1">Read Records</button>
+                </form>
+                <form method="POST">
+                    <input type="hidden" name="action" value="report">
+                    <button type="submit" class="btn btn-dark w-100">Generate Report</button>
+                </form>
+            </div>
+        </div>
+        
+        {% if records %}
+        <div class="card shadow">
+            <div class="card-header">Records from File</div>
+            <div class="card-body">
+                <ul class="list-group">
+                    {% for record in records %}
+                    <li class="list-group-item">{{ record.name }} - {{ record.marks }} marks</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+        {% endif %}
+        
+        {% if report %}
+        <div class="card mt-3 shadow border-success">
+            <div class="card-header bg-success text-white">Report Summary</div>
+            <div class="card-body">
+                <p><strong>Total Students:</strong> {{ report.total_students }}</p>
+                <p><strong>Average Marks:</strong> {{ report.average }}</p>
+                <p><strong>Topper:</strong> {{ report.topper }} ({{ report.highest }} marks)</p>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+// Dynamic student form fields for Q6
+document.querySelector('input[name="count"]').addEventListener('change', function(e) {
+    const container = document.getElementById('student-forms');
+    const count = parseInt(e.target.value) || 0;
+    container.innerHTML = '';
+    for(let i = 0; i < count; i++) {
+        container.innerHTML += `
+            <div class="border rounded p-3 mb-2">
+                <div class="mb-2">
+                    <label>Student ${i+1} Name</label>
+                    <input type="text" class="form-control" name="name_${i}" required>
+                </div>
+                <div>
+                    <label>Marks</label>
+                    <input type="number" class="form-control" name="marks_${i}" min="0" max="100" required>
+                </div>
+            </div>
+        `;
+    }
+});
+</script>
+{% endblock %}
+```
+
+---
+
+### `templates/q7_directory.html`
+```html
+{% extends "base.html" %}
+{% block title %}Q7: Directory Scanner{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card shadow">
+            <div class="card-header bg-dark text-white">
+                <h4 class="mb-0"><i class="bi bi-folder2-open"></i> Directory Scanner</h4>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="mb-3">
+                        <label for="directory_path" class="form-label">Directory Path</label>
+                        <input type="text" class="form-control" id="directory_path" name="directory_path" 
+                               placeholder="e.g., C:/Users/YourName/Documents or /home/user/projects" required>
+                        <div class="form-text">Enter an existing directory path on the server</div>
+                    </div>
+                    <button type="submit" class="btn btn-dark w-100">
+                        <i class="bi bi-search"></i> Scan Directory
+                    </button>
+                </form>
+            </div>
+        </div>
+        
+        {% if error %}
+        <div class="alert alert-danger mt-4">
+            <i class="bi bi-exclamation-triangle"></i> <strong>Error:</strong> {{ error }}
+        </div>
+        {% endif %}
+        
+        {% if structure %}
+        <div class="card mt-4 shadow">
+            <div class="card-header">Folder Structure</div>
+            <div class="card-body">
+                <pre class="bg-light p-3 rounded" style="overflow-x: auto; font-family: monospace;">
+{%- for item in structure -%}
+{{ item.indent }}{% if item.type == 'folder' %}📁{% else %}📄{% endif %} {{ item.name }}
+{%- endfor -%}
+                </pre>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+```
+
+---
+
+### `templates/q8_analysis.html`
+```html
+{% extends "base.html" %}
+{% block title %}Q8: Performance Analysis{% endblock %}
+{% block extra_css %}
+<style>
+    .chart-container { background: white; border-radius: 8px; padding: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .chart-img { max-width: 100%; height: auto; }
+</style>
+{% endblock %}
+
+{% block content %}
+<h3 class="mb-4"><i class="bi bi-graph-up"></i> Student Performance Analysis</h3>
+
+<!-- Data Table -->
+<div class="card mb-4">
+    <div class="card-header bg-info text-white">
+        <h5 class="mb-0">Student Marks Data</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            {{ dataframe|safe }}
+        </div>
+    </div>
+</div>
+
+<!-- Statistics -->
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card text-center bg-light">
+            <div class="card-body">
+                <h6 class="text-muted">Maths Average</h6>
+                <h3 class="text-primary">{{ stats.math_avg }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-center bg-light">
+            <div class="card-body">
+                <h6 class="text-muted">Science Average</h6>
+                <h3 class="text-success">{{ stats.science_avg }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-center bg-light">
+            <div class="card-body">
+                <h6 class="text-muted">English Average</h6>
+                <h3 class="text-warning">{{ stats.english_avg }}</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Top Performer -->
+<div class="alert alert-success mb-4">
+    <strong><i class="bi bi-trophy"></i> Top Performer:</strong> 
+    {{ topper.Student }} with average score of {{ "%.2f"|format(topper.Average) }}
+</div>
+
+<!-- Charts -->
+<div class="row g-4">
+    <div class="col-lg-6">
+        <div class="chart-container">
+            <h6 class="text-center mb-3">Average Marks by Subject</h6>
+            <img src="data:image/png;base64,{{ bar_chart }}" class="chart-img" alt="Bar Chart">
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="chart-container">
+            <h6 class="text-center mb-3">Student Average Performance</h6>
+            <img src="data:image/png;base64,{{ line_chart }}" class="chart-img" alt="Line Chart">
+        </div>
+    </div>
+    <div class="col-lg-6 mx-auto">
+        <div class="chart-container">
+            <h6 class="text-center mb-3">Subject-wise Contribution</h6>
+            <img src="data:image/png;base64,{{ pie_chart }}" class="chart-img" alt="Pie Chart">
+        </div>
+    </div>
+</div>
+{% endblock %}
+```
+
+---
+
+### `data/students.txt`
+```txt
+# Sample file - records will be added via Q6 module
+# Format: name,marks
+Alice,85
+Bob,92
+Charlie,78
+```
+
+---
+
+### `data/student_marks.csv`
+```csv
+Student,Maths,Science,English
+Asha,85,90,88
+Rahul,78,82,76
+Kiran,92,89,91
+Sneha,74,70,72
+Arjun,88,95,84
+```
+
+---
+
+## 🚀 Deployment Instructions
+
+### For Render (Recommended)
+1. Push all files to GitHub
+2. Go to [render.com](https://render.com) → New Web Service
+3. Connect your repo
+4. Settings:
+   - Build Command: `pip install -r requirements.txt`
+   - Start Command: `gunicorn app:app`
+5. Deploy!
+
+### For PythonAnywhere
+1. Upload files via web console
+2. Go to Web tab → Add web app → Flask
+3. Configure WSGI to point to `app.py`
+4. Reload
+
+### Local Testing
+```bash
+pip install -r requirements.txt
+python app.py
+# Visit: http://localhost:5000
+```
+
+---
+
+> ✅ All 8 original Python concepts are fully integrated with a responsive Bootstrap frontend. The app is deployment-ready for Render, PythonAnywhere, or any Flask-compatible host.
+
+Need any adjustments or additional features? Let me know! 🎓✨

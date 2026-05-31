@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block title %}Q6: File Handling{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-6">
+        <div class="card shadow mb-4">
+            <div class="card-header bg-secondary text-white">
+                <h4 class="mb-0"><i class="bi bi-file-earmark-text"></i> Write Records</h4>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <input type="hidden" name="action" value="write">
+                    <div class="mb-3">
+                        <label class="form-label">Number of Students</label>
+                        <input type="number" class="form-control" name="count" min="1" max="10" required>
+                    </div>
+                    <div id="student-forms"></div>
+                    <button type="submit" class="btn btn-secondary">
+                        <i class="bi bi-save"></i> Save to File
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-6">
+        <div class="card shadow mb-4">
+            <div class="card-header bg-dark text-white">
+                <h4 class="mb-0"><i class="bi bi-folder2-open"></i> Read & Report</h4>
+            </div>
+            <div class="card-body">
+                <form method="POST" class="d-flex gap-2 mb-3">
+                    <input type="hidden" name="action" value="read">
+                    <button type="submit" class="btn btn-outline-dark flex-grow-1">Read Records</button>
+                </form>
+                <form method="POST">
+                    <input type="hidden" name="action" value="report">
+                    <button type="submit" class="btn btn-dark w-100">Generate Report</button>
+                </form>
+            </div>
+        </div>
+        
+        {% if records %}
+        <div class="card shadow">
+            <div class="card-header">Records from File</div>
+            <div class="card-body">
+                <ul class="list-group">
+                    {% for record in records %}
+                    <li class="list-group-item">{{ record.name }} - {{ record.marks }} marks</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+        {% endif %}
+        
+        {% if report %}
+        <div class="card mt-3 shadow border-success">
+            <div class="card-header bg-success text-white">Report Summary</div>
+            <div class="card-body">
+                <p><strong>Total Students:</strong> {{ report.total_students }}</p>
+                <p><strong>Average Marks:</strong> {{ report.average }}</p>
+                <p><strong>Topper:</strong> {{ report.topper }} ({{ report.highest }} marks)</p>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+// Dynamic student form fields for Q6
+document.querySelector('input[name="count"]').addEventListener('change', function(e) {
+    const container = document.getElementById('student-forms');
+    const count = parseInt(e.target.value) || 0;
+    container.innerHTML = '';
+    for(let i = 0; i < count; i++) {
+        container.innerHTML += `
+            <div class="border rounded p-3 mb-2">
+                <div class="mb-2">
+                    <label>Student ${i+1} Name</label>
+                    <input type="text" class="form-control" name="name_${i}" required>
+                </div>
+                <div>
+                    <label>Marks</label>
+                    <input type="number" class="form-control" name="marks_${i}" min="0" max="100" required>
+                </div>
+            </div>
+        `;
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Dashboard - Smart Campus{% endblock %}
+
+{% block content %}
+<div class="text-center mb-5">
+    <h1 class="display-4 fw-bold text-primary">
+        <i class="bi bi-mortarboard-fill"></i> Smart Campus Information System
+    </h1>
+    <p class="lead text-muted">Integrated Student Management Platform with 8 Core Modules</p>
+</div>
+
+<div class="row g-4">
+    <!-- Q1-Q8 Cards -->
+    {% set modules = [
+        ('q1_registration', 'Q1: Registration', 'person-plus', 'primary', 'Student registration with automated grade evaluation'),
+        ('q2_enrollment', 'Q2: Enrollment', 'book', 'success', 'Manage course enrollment with credit validation'),
+        ('q3_records', 'Q3: Records', 'database', 'info', 'Student data management using lists, dicts & sets'),
+        ('q4_sorting', 'Q4: Sort/Search', 'sort-numeric-down', 'warning', 'Bubble sort + Linear & Binary search'),
+        ('q5_fees', 'Q5: Fees', 'cash-stack', 'danger', 'Calculate total fees with optional add-ons'),
+        ('q6_filehandling', 'Q6: File I/O', 'file-earmark-text', 'secondary', 'Write/read student records & generate reports'),
+        ('q7_directory', 'Q7: Directory', 'folder2-open', 'dark', 'Scan directories with custom exception handling'),
+        ('q8_analysis', 'Q8: Analytics', 'graph-up', 'primary', 'Performance analysis with NumPy, Pandas & charts')
+    ] %}
+    
+    {% for route, title, icon, color, desc in modules %}
+    <div class="col-md-6 col-lg-3">
+        <div class="card h-100 border-{{ color }} hover-shadow">
+            <div class="card-body text-center">
+                <i class="bi bi-{{ icon }} fs-1 text-{{ color }} mb-3"></i>
+                <h5 class="card-title">{{ title }}</h5>
+                <p class="card-text small">{{ desc }}</p>
+                <a href="{{ url_for(route) }}" class="btn btn-outline-{{ color }} btn-sm">Open Module</a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="mt-5 p-4 bg-light rounded">
+    <h5><i class="bi bi-info-circle"></i> About This System</h5>
+    <p>This Smart Campus Information System integrates all 8 Python programming concepts into a unified web application. Built with Flask backend and Bootstrap frontend.</p>
+    <ul class="mb-0">
+        <li>Functions, conditionals & input validation</li>
+        <li>Data structures (lists, dictionaries, sets)</li>
+        <li>Sorting algorithms & search techniques</li>
+        <li>File handling & exception management</li>
+        <li>Data analysis with NumPy, Pandas & visualization</li>
+    </ul>
+</div>
+{% endblock %}

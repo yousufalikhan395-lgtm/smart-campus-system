@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Q3: Student Records{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-6">
+        <div class="card shadow mb-4">
+            <div class="card-header bg-info text-white">
+                <h4 class="mb-0"><i class="bi bi-database"></i> Student Records</h4>
+            </div>
+            <div class="card-body">
+                {% for student in records %}
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <h5 class="card-title">{{ student.name }}</h5>
+                        <p class="card-text mb-1"><strong>Age:</strong> {{ student.age }}</p>
+                        <p class="card-text mb-1"><strong>Grades:</strong> {{ student.grades | join(', ') }}</p>
+                        <p class="card-text"><strong>Average:</strong> {{ (student.grades | sum) / (student.grades | length) | round(2) }}</p>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-6">
+        <div class="card shadow">
+            <div class="card-header bg-warning text-dark">
+                <h4 class="mb-0"><i class="bi bi-people"></i> Event Participation (Sets)</h4>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-6">
+                        <h6>Event 1</h6>
+                        <ul class="list-unstyled">
+                            {% for name in event1 %}<li>• {{ name }}</li>{% endfor %}
+                        </ul>
+                    </div>
+                    <div class="col-6">
+                        <h6>Event 2</h6>
+                        <ul class="list-unstyled">
+                            {% for name in event2 %}<li>• {{ name }}</li>{% endfor %}
+                        </ul>
+                    </div>
+                </div>
+                <hr>
+                <div class="alert alert-success">
+                    <strong>Common Participants:</strong>
+                    <ul class="mb-0">
+                        {% for name in common %}<li>{{ name }}</li>{% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

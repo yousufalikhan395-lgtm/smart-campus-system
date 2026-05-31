@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Q7: Directory Scanner{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card shadow">
+            <div class="card-header bg-dark text-white">
+                <h4 class="mb-0"><i class="bi bi-folder2-open"></i> Directory Scanner</h4>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="mb-3">
+                        <label for="directory_path" class="form-label">Directory Path</label>
+                        <input type="text" class="form-control" id="directory_path" name="directory_path" 
+                               placeholder="e.g., C:/Users/YourName/Documents or /home/user/projects" required>
+                        <div class="form-text">Enter an existing directory path on the server</div>
+                    </div>
+                    <button type="submit" class="btn btn-dark w-100">
+                        <i class="bi bi-search"></i> Scan Directory
+                    </button>
+                </form>
+            </div>
+        </div>
+        
+        {% if error %}
+        <div class="alert alert-danger mt-4">
+            <i class="bi bi-exclamation-triangle"></i> <strong>Error:</strong> {{ error }}
+        </div>
+        {% endif %}
+        
+        {% if structure %}
+        <div class="card mt-4 shadow">
+            <div class="card-header">Folder Structure</div>
+            <div class="card-body">
+                <pre class="bg-light p-3 rounded" style="overflow-x: auto; font-family: monospace;">
+{%- for item in structure -%}
+{{ item.indent }}{% if item.type == 'folder' %}📁{% else %}📄{% endif %} {{ item.name }}
+{%- endfor -%}
+                </pre>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

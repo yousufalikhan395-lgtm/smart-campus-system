@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Q5: Fee Calculation{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <div class="card shadow">
+            <div class="card-header bg-danger text-white">
+                <h4 class="mb-0"><i class="bi bi-cash-stack"></i> Student Fee Calculation</h4>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="mb-3">
+                        <label for="tuition" class="form-label">Tuition Fee ($)</label>
+                        <input type="number" class="form-control" id="tuition" name="tuition" step="0.01" required placeholder="e.g., 5000.00">
+                    </div>
+                    <div class="mb-3">
+                        <label for="hostel" class="form-label">Hostel Fee ($)</label>
+                        <input type="number" class="form-control" id="hostel" name="hostel" step="0.01" value="0" placeholder="Enter 0 if not applicable">
+                    </div>
+                    <div class="mb-3">
+                        <label for="transport" class="form-label">Transport Fee ($)</label>
+                        <input type="number" class="form-control" id="transport" name="transport" step="0.01" value="0" placeholder="Enter 0 if not applicable">
+                    </div>
+                    <button type="submit" class="btn btn-danger w-100">
+                        <i class="bi bi-calculator"></i> Calculate Total Fee
+                    </button>
+                </form>
+            </div>
+        </div>
+        
+        {% if total_fee is not none %}
+        <div class="card mt-4 shadow border-danger">
+            <div class="card-body text-center">
+                <h5 class="text-muted">Total Payable Fee</h5>
+                <h1 class="display-4 fw-bold text-danger">${{ "%.2f"|format(total_fee) }}</h1>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

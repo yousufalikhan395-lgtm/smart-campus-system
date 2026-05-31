@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Q8: Performance Analysis{% endblock %}
+{% block extra_css %}
+<style>
+    .chart-container { background: white; border-radius: 8px; padding: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .chart-img { max-width: 100%; height: auto; }
+</style>
+{% endblock %}
+
+{% block content %}
+<h3 class="mb-4"><i class="bi bi-graph-up"></i> Student Performance Analysis</h3>
+
+<!-- Data Table -->
+<div class="card mb-4">
+    <div class="card-header bg-info text-white">
+        <h5 class="mb-0">Student Marks Data</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            {{ dataframe|safe }}
+        </div>
+    </div>
+</div>
+
+<!-- Statistics -->
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card text-center bg-light">
+            <div class="card-body">
+                <h6 class="text-muted">Maths Average</h6>
+                <h3 class="text-primary">{{ stats.math_avg }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-center bg-light">
+            <div class="card-body">
+                <h6 class="text-muted">Science Average</h6>
+                <h3 class="text-success">{{ stats.science_avg }}</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-center bg-light">
+            <div class="card-body">
+                <h6 class="text-muted">English Average</h6>
+                <h3 class="text-warning">{{ stats.english_avg }}</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Top Performer -->
+<div class="alert alert-success mb-4">
+    <strong><i class="bi bi-trophy"></i> Top Performer:</strong> 
+    {{ topper.Student }} with average score of {{ "%.2f"|format(topper.Average) }}
+</div>
+
+<!-- Charts -->
+<div class="row g-4">
+    <div class="col-lg-6">
+        <div class="chart-container">
+            <h6 class="text-center mb-3">Average Marks by Subject</h6>
+            <img src="data:image/png;base64,{{ bar_chart }}" class="chart-img" alt="Bar Chart">
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="chart-container">
+            <h6 class="text-center mb-3">Student Average Performance</h6>
+            <img src="data:image/png;base64,{{ line_chart }}" class="chart-img" alt="Line Chart">
+        </div>
+    </div>
+    <div class="col-lg-6 mx-auto">
+        <div class="chart-container">
+            <h6 class="text-center mb-3">Subject-wise Contribution</h6>
+            <img src="data:image/png;base64,{{ pie_chart }}" class="chart-img" alt="Pie Chart">
+        </div>
+    </div>
+</div>
+{% endblock %}
